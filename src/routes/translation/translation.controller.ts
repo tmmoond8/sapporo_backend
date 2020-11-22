@@ -37,17 +37,16 @@ class TranslationController {
     next: express.NextFunction
   ) => {
     const { body} = req;
-    console.log(body);
     if (!Array.isArray(body)) {
       res.json({ ok: false });
     } else {
       const translationQueue: Record<string, Promise<{ data: { data: any }}>> = {};
-      const response: Record<string, { originText: string; translatedText: string}> = {};
+      const response: string[] = [];
       
       body.forEach((text: string, index: number) => {
         if (dictionary.has(text)) {
           console.log('hit', text)
-          response[index.toString()] = { originText: text, translatedText: dictionary.get(text) || ''}
+          response[index] = dictionary.get(text) || '';
         } else {
           translationQueue[index.toString()] = APIS.googleTranslation(encodeURIComponent(text))
         }
@@ -58,12 +57,11 @@ class TranslationController {
       const results = await Promise.all(entries.map(([_, value]) => value));
       const dataSet = results.map(result => result.data.data);
       entries.forEach(([key, _], index) => {
-        const translatedText = dataSet[index].translations[0];
-        response[key] = translatedText;
+        const translatedText = dataSet[index].translations[0].translatedText;
+        response[parseInt(key)] = translatedText;
         dictionary.set(body[key as any], translatedText)
       });
 
-      console.log(response);
       res.json({ ok: true, data: response });
     }
   }
