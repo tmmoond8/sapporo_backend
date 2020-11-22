@@ -36,30 +36,36 @@ class TranslationController {
     res: express.Response,
     next: express.NextFunction
   ) => {
-    const { body } = req;
-    const translationQueue: Record<string, Promise<{ data: { data: any }}>> = {};
-    const response: Record<string, { originText: string; translatedText: string}> = {};
+    const { body} = req;
+    console.log(body);
+    if (!Array.isArray(body)) {
+      res.json({ ok: false });
+    } else {
+      const translationQueue: Record<string, Promise<{ data: { data: any }}>> = {};
+      const response: Record<string, { originText: string; translatedText: string}> = {};
+      
+      body.forEach((text: string, index: number) => {
+        if (dictionary.has(text)) {
+          console.log('hit', text)
+          response[index.toString()] = { originText: text, translatedText: dictionary.get(text) || ''}
+        } else {
+          translationQueue[index.toString()] = APIS.googleTranslation(encodeURIComponent(text))
+        }
+      })
 
-    body.forEach((text: string, index: number) => {
-      if (dictionary.has(text)) {
-        console.log('hit', text)
-        response[index.toString()] = { originText: text, translatedText: dictionary.get(text) || ''}
-      } else {
-        translationQueue[index.toString()] = APIS.googleTranslation(encodeURIComponent(text))
-      }
-    })
+      const entries = Object.entries(translationQueue);
 
-    const entries = Object.entries(translationQueue);
+      const results = await Promise.all(entries.map(([_, value]) => value));
+      const dataSet = results.map(result => result.data.data);
+      entries.forEach(([key, _], index) => {
+        const translatedText = dataSet[index].translations[0];
+        response[key] = translatedText;
+        dictionary.set(body[key as any], translatedText)
+      });
 
-    const results = await Promise.all(entries.map(([_, value]) => value));
-    const dataSet = results.map(result => result.data.data);
-    entries.forEach(([key, _], index) => {
-      const translatedText = dataSet[index].translations[0];
-      response[key] = translatedText;
-      dictionary.set(body[key], translatedText)
-    });
-
-    res.json({ ok: true, data: response });
+      console.log(response);
+      res.json({ ok: true, data: response });
+    }
   }
 };
 

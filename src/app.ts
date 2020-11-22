@@ -3,6 +3,7 @@ require('dotenv').config(); // .env 파일에서 환경변수 불러오기
 import cookieParser from 'cookie-parser';
 import express, { Express } from 'express';
 import hpp from 'hpp';
+import cors from 'cors';
 import morgan = require('morgan');
 import logger from './logger';
 import routes from './routes';
@@ -33,7 +34,7 @@ class App {
     } else {
       this.app.use(morgan('dev'));
     }
-    
+    this.app.use(cors());
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: false }));
     this.app.use(cookieParser());
