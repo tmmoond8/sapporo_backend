@@ -1,8 +1,8 @@
 import express from 'express';
-import test from './test';
+import translation from './translation';
 
 const routes = express.Router();
 
-routes.use('/test', test);
+routes.use('/translation', translation);
 
 export default routes;
