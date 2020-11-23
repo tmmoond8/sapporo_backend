@@ -5,7 +5,6 @@ import express, { Express } from 'express';
 import hpp from 'hpp';
 import cors from 'cors';
 import morgan = require('morgan');
-import logger from './logger';
 import routes from './routes';
 
 class App {
@@ -19,7 +18,7 @@ class App {
 
   public start = async () => {
     this.app.listen(this.app.get('port'), () => {
-      logger.info(`${this.app.get('port')}번 포트에서 대기중`);
+      console.info(`${this.app.get('port')}번 포트에서 대기중`);
     });
   };
 
@@ -47,8 +46,7 @@ class App {
       ) => {
         const err: any = new Error('Not Found');
         err.status = 404;
-        logger.info('hello');
-        logger.error(err.message);
+        console.error(err.message);
         next(err);
       }
     );

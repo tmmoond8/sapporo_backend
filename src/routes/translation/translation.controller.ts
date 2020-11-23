@@ -1,6 +1,5 @@
 import express from 'express';
 import APIS from '../../apis';
-
 import LruCache from 'lru-cache';
 
 const dictionary = new LruCache<string, string>({
@@ -18,16 +17,18 @@ class TranslationController {
     if (dictionary.has(text)) {
       res.json({ ok: true, originText: text, translatedText: dictionary.get(text) });
     } else {
-      const { data: { data }, status } = await APIS.googleTranslation(encodeURIComponent(text));
-      let translatedText;
-      if (status === 200 && data.translations.length > 0) {
-        console.log(data.translations);
-        translatedText = data.translations[0].translatedText;
-        dictionary.set(text, translatedText);
-        res.json({ ok: true, originText: text, translatedText });
-      } else {
-        res.json({ ok: true, originText: text });
+      try {
+        const { data: { data }, status } = await APIS.googleTranslation(encodeURIComponent(text));
+        let translatedText;
+        if (status === 200 && data.translations.length > 0) {
+          translatedText = data.translations[0].translatedText;
+          dictionary.set(text, translatedText);
+          res.json({ ok: true, data: translatedText });
+        } 
+      } catch (error) {
+        console.error(error);
       }
+      res.json({ ok: false, data: '' });
     }
   }
 
@@ -45,7 +46,6 @@ class TranslationController {
       
       body.forEach((text: string, index: number) => {
         if (dictionary.has(text)) {
-          console.log('hit', text)
           response[index] = dictionary.get(text) || '';
         } else {
           translationQueue[index.toString()] = APIS.googleTranslation(encodeURIComponent(text))
@@ -53,16 +53,19 @@ class TranslationController {
       })
 
       const entries = Object.entries(translationQueue);
-
-      const results = await Promise.all(entries.map(([_, value]) => value));
-      const dataSet = results.map(result => result.data.data);
-      entries.forEach(([key, _], index) => {
-        const translatedText = dataSet[index].translations[0].translatedText;
-        response[parseInt(key)] = translatedText;
-        dictionary.set(body[key as any], translatedText)
-      });
-
-      res.json({ ok: true, data: response });
+      try {
+        const results = await Promise.all(entries.map(([_, value]) => value));
+        const dataSet = results.map(result => result.data.data);
+        entries.forEach(([key, _], index) => {
+          const translatedText = dataSet[index].translations[0].translatedText;
+          response[parseInt(key)] = translatedText;
+          dictionary.set(body[key as any], translatedText)
+        });
+        res.json({ ok: true, data: response });
+      } catch(error) {
+        console.error(error);
+      }
+      res.json({ ok: false, data: [] });
     }
   }
 };
